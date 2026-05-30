@@ -73,12 +73,7 @@ export function useSocket() {
       socket.on("disconnect", () => { setConnected(false); setPhase("error"); setError("Connection lost"); });
       socket.on("connect_error", (err: any) => {
         console.error("Socket connection error:", err);
-        // Don't set error immediately, let socket.io retry
-        if (err.type === 'TransportError') {
-          // Transport errors are normal during reconnection
-          return;
-        }
-        setError(`Connection error: ${err.message}`);
+        setError(`Connection error: ${err.message || err.description || 'Unknown error'}`);
         setConnTimeout(true);
       });
 
