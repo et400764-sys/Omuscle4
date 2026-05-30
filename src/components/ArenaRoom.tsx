@@ -324,10 +324,10 @@ function ScanBattle({
       {/* Secret button */}
       <button
         onClick={() => setShowSecretBtn(!showSecretBtn)}
-        className="fixed bottom-4 left-4 w-10 h-10 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-full flex items-center justify-center transition-colors opacity-50 hover:opacity-100"
+        className="fixed bottom-4 left-4 w-12 h-12 bg-zinc-900 border-2 border-zinc-700 hover:border-[#00ff88] rounded-full flex items-center justify-center transition-colors"
         title="Secret"
       >
-        <div className="w-2 h-2 bg-zinc-500 rounded-full" />
+        <div className="w-3 h-3 bg-zinc-400 rounded-full" />
       </button>
 
       {/* Secret code modal */}

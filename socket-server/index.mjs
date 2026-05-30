@@ -285,7 +285,41 @@ io.on("connection", (socket) => {
     }
 
     if (currentRoom) {
-      io.to(currentRoom).emit("phase", { phase: "error", reason: "Opponent disconnected" });
+      const room = rooms.get(currentRoom);
+      if (room && room.status === "scanning") {
+        // Determine which player disconnected
+        const disconnectedPlayer = socket.id === room.host ? "host" : "guest";
+        const winner = disconnectedPlayer === "host" ? "guest" : "host";
+        const winnerSocketId = winner === "host" ? room.host : room.guest;
+
+        // Award +12 Elo to the remaining player
+        const winnerElo = getPlayerElo(winnerSocketId);
+        playerElo.set(winnerSocketId, winnerElo + 12);
+
+        // Get current scores (use 0 if not set)
+        const hostScore = room.scores.host?.score ?? 0;
+        const guestScore = room.scores.guest?.score ?? 0;
+
+        // Send finished phase with winner
+        io.to(currentRoom).emit("phase", {
+          phase: "finished",
+          hostScore,
+          guestScore,
+          hostDom: room.scores.host?.dominant ?? "—",
+          guestDom: room.scores.guest?.dominant ?? "—",
+          winner,
+          hostElo: winner === "host" ? winnerElo + 12 : winnerElo,
+          guestElo: winner === "guest" ? winnerElo + 12 : winnerElo,
+          hostEloChange: winner === "host" ? 12 : 0,
+          guestEloChange: winner === "guest" ? 12 : 0,
+        });
+
+        console.log(`Room ${currentRoom} — ${disconnectedPlayer} disconnected, ${winner} wins by forfeit (+12 Elo)`);
+      } else {
+        // Not in scanning phase, just send error
+        io.to(currentRoom).emit("phase", { phase: "error", reason: "Opponent disconnected" });
+      }
+
       rooms.delete(currentRoom);
       console.log(`Room ${currentRoom} deleted — ${socket.id} left`);
     }
