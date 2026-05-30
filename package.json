@@ -8,6 +8,7 @@
     "dev:full": "concurrently -k -n \"next,socket\" -c \"cyan,green\" \"npm run dev\" \"npm run dev:socket\"",
     "build": "next build",
     "start": "next start",
+    "start:socket": "node socket-server/index.mjs",
     "lint": "eslint"
   },
   "dependencies": {
