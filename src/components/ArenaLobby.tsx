@@ -9,10 +9,14 @@ interface Props {
   onJoin: () => void;
   onLeave: () => void;
   error: string | null;
+  myElo: number | null;
+  leaderboard: Array<{socketId: string; elo: number}>;
+  onGetLeaderboard: () => void;
 }
 
-export default function ArenaLobby({ connected, arenaCount, inArena, onJoin, onLeave, error }: Props) {
+export default function ArenaLobby({ connected, arenaCount, inArena, onJoin, onLeave, error, myElo, leaderboard, onGetLeaderboard }: Props) {
   const [searching, setSearching] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
     if (inArena) {
@@ -21,6 +25,12 @@ export default function ArenaLobby({ connected, arenaCount, inArena, onJoin, onL
       setSearching(false);
     }
   }, [inArena]);
+
+  useEffect(() => {
+    if (connected) {
+      onGetLeaderboard();
+    }
+  }, [connected, onGetLeaderboard]);
 
   function handleJoin() {
     setSearching(true);
@@ -63,6 +73,17 @@ export default function ArenaLobby({ connected, arenaCount, inArena, onJoin, onL
           </div>
         )}
 
+        {/* Your Elo */}
+        {myElo !== null && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-2">
+            <div className="text-zinc-600 text-xs tracking-widest uppercase">Your Rating</div>
+            <div className="text-4xl font-black tracking-tight text-[#00ff88] tabular-nums">
+              {myElo}
+            </div>
+            <div className="text-zinc-600 text-xs">Elo Rating</div>
+          </div>
+        )}
+
         {/* Live counter */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -81,6 +102,39 @@ export default function ArenaLobby({ connected, arenaCount, inArena, onJoin, onL
             {arenaCount >= 2 && `${arenaCount} players in queue`}
           </div>
         </div>
+
+        {/* Leaderboard button */}
+        <button
+          onClick={() => setShowLeaderboard(!showLeaderboard)}
+          className="w-full py-3 border border-zinc-800 text-zinc-400 font-bold tracking-widest uppercase rounded-lg hover:border-zinc-600 hover:bg-zinc-900 transition-colors text-sm"
+        >
+          {showLeaderboard ? "Hide Leaderboard" : "Show Leaderboard"}
+        </button>
+
+        {/* Leaderboard */}
+        {showLeaderboard && leaderboard.length > 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+            <div className="text-zinc-600 text-xs tracking-widest uppercase text-center">Top 10 Players</div>
+            <div className="space-y-2">
+              {leaderboard.map((player, index) => (
+                <div key={player.socketId} className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      index === 0 ? "bg-yellow-500 text-black" :
+                      index === 1 ? "bg-gray-400 text-black" :
+                      index === 2 ? "bg-amber-700 text-black" :
+                      "bg-zinc-800 text-zinc-400"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <span className="text-zinc-400 text-sm">Player {player.socketId.slice(0, 6)}</span>
+                  </div>
+                  <div className="text-white font-bold tabular-nums">{player.elo}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Action buttons */}
         {!searching ? (

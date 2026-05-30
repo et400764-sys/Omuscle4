@@ -17,6 +17,10 @@ export interface MatchResult {
   hostDom:    string;
   guestDom:   string;
   winner:     "host" | "guest" | "draw";
+  hostElo?:    number;
+  guestElo?:   number;
+  hostEloChange?: number;
+  guestEloChange?: number;
 }
 
 export interface ReadyState {
@@ -42,6 +46,8 @@ export function useSocket() {
   const [connTimeout,    setConnTimeout]    = useState(false);
   const [arenaCount,     setArenaCount]     = useState(0);
   const [inArena,        setInArena]        = useState(false);
+  const [myElo,          setMyElo]          = useState<number | null>(null);
+  const [leaderboard,    setLeaderboard]    = useState<Array<{socketId: string; elo: number}>>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +97,8 @@ export function useSocket() {
         hostScore?: number; guestScore?: number;
         hostDom?: string; guestDom?: string;
         winner?: string; reason?: string;
+        hostElo?: number; guestElo?: number;
+        hostEloChange?: number; guestEloChange?: number;
       }) => {
         const p = data.phase as MatchPhase;
         setPhase(p);
@@ -102,6 +110,10 @@ export function useSocket() {
             hostDom:    data.hostDom    ?? "—",
             guestDom:   data.guestDom   ?? "—",
             winner:     (data.winner as "host" | "guest" | "draw") ?? "draw",
+            hostElo:    data.hostElo,
+            guestElo:   data.guestElo,
+            hostEloChange: data.hostEloChange,
+            guestEloChange: data.guestEloChange,
           });
         }
         if (p === "error") setError(data.reason ?? "Something went wrong");
@@ -127,6 +139,14 @@ export function useSocket() {
         setRoomCode(code);
         roleRef.current = matchedRole;
         setInArena(false);
+      });
+
+      socket.on("your-elo", ({ elo }: { elo: number }) => {
+        setMyElo(elo);
+      });
+
+      socket.on("leaderboard", ({ leaderboard }: { leaderboard: Array<{socketId: string; elo: number}> }) => {
+        setLeaderboard(leaderboard);
       });
     });
 
@@ -169,6 +189,10 @@ export function useSocket() {
     socketRef.current?.emit("leave-arena");
   }, []);
 
+  const getLeaderboard = useCallback(() => {
+    socketRef.current?.emit("get-leaderboard");
+  }, []);
+
   const myReady = readyState[roleRef.current ?? "host"];
   const opponentReady = readyState[roleRef.current === "host" ? "guest" : "host"];
 
@@ -195,5 +219,8 @@ export function useSocket() {
     inArena,
     joinArena,
     leaveArena,
+    myElo,
+    leaderboard,
+    getLeaderboard,
   };
 }

@@ -1,4 +1,16 @@
 services:
+  # Socket.io server (must be deployed first)
+  - type: web
+    name: omuscle-socket
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run start:socket
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+  
   # Next.js web application
   - type: web
     name: omuscle-web
@@ -7,16 +19,8 @@ services:
     startCommand: npm start
     envVars:
       - key: NEXT_PUBLIC_SOCKET_URL
-        value: https://omuscle-socket.onrender.com
+        sync: false
       - key: PORT
         value: 10000
-  
-  # Socket.io server
-  - type: web
-    name: omuscle-socket
-    runtime: node
-    buildCommand: npm install
-    startCommand: node socket-server/index.mjs
-    envVars:
-      - key: PORT
-        value: 10000
+      - key: NODE_ENV
+        value: production

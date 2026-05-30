@@ -422,6 +422,10 @@ function ResultsScreen({
   const oppScore = role === "host" ? result.guestScore : result.hostScore;
   const myDom    = role === "host" ? result.hostDom    : result.guestDom;
   const oppDom   = role === "host" ? result.guestDom   : result.hostDom;
+  const myElo    = role === "host" ? result.hostElo    : result.guestElo;
+  const oppElo   = role === "host" ? result.guestElo   : result.hostElo;
+  const myEloChange = role === "host" ? result.hostEloChange : result.guestEloChange;
+  const oppEloChange = role === "host" ? result.guestEloChange : result.hostEloChange;
   const won      = result.winner === role;
   const draw     = result.winner === "draw";
 
@@ -455,6 +459,16 @@ function ResultsScreen({
               {myScore.toFixed(1)}
             </div>
             {myDom !== "—" && <div className="text-xs text-zinc-500">DOM: <span className="text-[#00ff88]">{myDom}</span></div>}
+            {myElo !== undefined && (
+              <div className="text-xs text-zinc-500">
+                Elo: <span className="text-white font-bold">{myElo}</span>
+                {myEloChange !== undefined && (
+                  <span className={`ml-1 ${myEloChange > 0 ? "text-[#00ff88]" : myEloChange < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                    {myEloChange > 0 ? "+" : ""}{myEloChange}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="bg-zinc-900 rounded-xl p-5 space-y-2">
             <div className="text-[10px] text-zinc-500 tracking-widest uppercase">Opponent</div>
@@ -462,6 +476,16 @@ function ResultsScreen({
               {oppScore.toFixed(1)}
             </div>
             {oppDom !== "—" && <div className="text-xs text-zinc-500">DOM: <span className="text-[#00ff88]">{oppDom}</span></div>}
+            {oppElo !== undefined && (
+              <div className="text-xs text-zinc-500">
+                Elo: <span className="text-white font-bold">{oppElo}</span>
+                {oppEloChange !== undefined && (
+                  <span className={`ml-1 ${oppEloChange > 0 ? "text-[#00ff88]" : oppEloChange < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                    {oppEloChange > 0 ? "+" : ""}{oppEloChange}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -496,6 +520,7 @@ export default function ArenaRoom() {
     socketRef,
     arenaCount, inArena, joinArena, leaveArena,
     sendReady, sendScore,
+    myElo, leaderboard, getLeaderboard,
   } = useSocket();
 
   // WebRTC — active during camera-check, countdown, and scanning
@@ -550,6 +575,9 @@ export default function ArenaRoom() {
         onJoin={joinArena}
         onLeave={leaveArena}
         error={error}
+        myElo={myElo}
+        leaderboard={leaderboard}
+        onGetLeaderboard={getLeaderboard}
       />
     );
   }
