@@ -5,7 +5,12 @@ const PORT = process.env.PORT ?? process.env.SOCKET_PORT ?? 3003;
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { 
+    origin: "*", 
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  allowEIO3: true,
 });
 
 // roomCode → RoomState
