@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
 import { ScoreResult } from "@/lib/scoring";
 import { MatchPhase, MatchResult, useSocket } from "@/lib/useSocket";
 import { useWebRTC } from "@/lib/useWebRTC";
-
-const BodyScanner = dynamic(() => import("@/components/BodyScanner"), { ssr: false });
+import BodyScanner from "@/components/BodyScanner";
+import ArenaLobby from "@/components/ArenaLobby";
 
 function scoreColor(v: number | null): string {
   if (v === null) return "#52525b";
@@ -14,53 +13,6 @@ function scoreColor(v: number | null): string {
   if (v >= 6) return "#a3e635";
   if (v >= 4) return "#facc15";
   return "#f87171";
-}
-
-// ── Waiting for opponent ─────────────────────────────────────────────────────
-function WaitingRoom({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function copy() {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <div className="flex items-center h-12 border-b border-zinc-900 px-4">
-        <a href="/" className="text-zinc-500 hover:text-white transition-colors text-sm flex items-center gap-1">← Home</a>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm text-center space-y-8">
-        <div className="space-y-2">
-          <div className="text-[#00ff88] text-xs tracking-widest uppercase font-bold">Private Match</div>
-          <h2 className="text-2xl font-black tracking-tight">Waiting for opponent</h2>
-          <p className="text-zinc-500 text-sm">Share this code with the person you want to challenge.</p>
-        </div>
-
-        {/* Room code */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-4">
-          <div className="text-zinc-600 text-xs tracking-widest uppercase">Room code</div>
-          <div className="text-5xl font-black tracking-[0.25em] text-white">{code}</div>
-          <button
-            onClick={copy}
-            className="w-full py-2.5 border border-zinc-700 rounded-lg text-sm font-bold tracking-widest uppercase
-              hover:border-zinc-500 hover:bg-zinc-800 transition-colors text-zinc-300"
-          >
-            {copied ? "Copied ✓" : "Copy code"}
-          </button>
-        </div>
-
-        <div className="flex items-center justify-center gap-2 text-zinc-600 text-xs">
-          <div className="w-2 h-2 rounded-full bg-zinc-600 animate-pulse" />
-          Waiting for opponent to join…
-        </div>
-      </div>
-      </div>
-    </div>
-  );
 }
 
 // ── Camera check ─────────────────────────────────────────────────────────────
@@ -515,19 +467,19 @@ function ResultsScreen({
 
         <div className="flex gap-3">
           <a
+            href="/arena"
+            className="flex-1 py-3 bg-[#00ff88] text-black font-black tracking-widest uppercase rounded-lg
+              hover:bg-[#00e87a] transition-colors text-center text-sm"
+          >
+            Arena Again
+          </a>
+          <a
             href="/"
             className="flex-1 py-3 border border-zinc-700 text-zinc-300 font-bold tracking-widest uppercase rounded-lg
               hover:border-zinc-500 hover:bg-zinc-900 transition-colors text-center text-sm"
           >
             Home
           </a>
-          <button
-            onClick={onPlayAgain}
-            className="flex-1 py-3 bg-[#00ff88] text-black font-black tracking-widest uppercase rounded-lg
-              hover:bg-[#00e87a] transition-colors text-sm"
-          >
-            Play again
-          </button>
         </div>
       </div>
       </div>
@@ -535,14 +487,15 @@ function ResultsScreen({
   );
 }
 
-// ── Root MatchRoom ─────────────────────────────────────────────────────────────
-export default function MatchRoom() {
+// ── Root ArenaRoom ─────────────────────────────────────────────────────────────
+export default function ArenaRoom() {
   const {
     connected, connTimeout, phase, roomCode, countdown,
     opponentScore, opponentDom, opponentFlaw,
     myReady, opponentReady, result, error, role,
     socketRef,
-    createRoom, joinRoom, sendReady, sendScore,
+    arenaCount, inArena, joinArena, leaveArena,
+    sendReady, sendScore,
   } = useSocket();
 
   // WebRTC — active during camera-check, countdown, and scanning
@@ -587,56 +540,19 @@ export default function MatchRoom() {
     );
   }
 
-  // ── Idle — lobby ───────────────────────────────────────────────────────────
+  // ── Idle — arena lobby ─────────────────────────────────────────────────────
   if (phase === "idle") {
     return (
-      <div className="min-h-screen bg-[#080808] flex flex-col">
-        <div className="flex items-center h-12 border-b border-zinc-900 px-4">
-          <a href="/" className="text-zinc-500 hover:text-white transition-colors text-sm flex items-center gap-1">← Home</a>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center space-y-2">
-            <div className="text-[#00ff88] text-xs tracking-widest uppercase font-bold">Private Match</div>
-            <h1 className="text-3xl font-black tracking-tight">Challenge a friend</h1>
-            <p className="text-zinc-500 text-sm">Create a room and share the code, or enter a code to join someone.</p>
-          </div>
-
-          <div className="flex items-center justify-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${connected ? "bg-[#00ff88]" : "bg-zinc-600 animate-pulse"}`} />
-            <span className="text-xs text-zinc-600">{connected ? "Server connected" : "Connecting…"}</span>
-          </div>
-
-          {connTimeout && !connected && (
-            <div className="px-4 py-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-center space-y-2">
-              <div className="text-yellow-400 text-sm font-bold">Can&apos;t reach match server</div>
-              <div className="text-yellow-400/70 text-xs leading-relaxed">
-                The socket server isn&apos;t running. Start it with:<br />
-                <code className="bg-black/40 px-2 py-0.5 rounded font-mono text-[11px]">npm run dev:full</code>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
-              {error}
-            </div>
-          )}
-
-          <LobbyButtons connected={connected} onCreate={createRoom} onJoin={joinRoom} />
-        </div>
-        </div>
-      </div>
+      <ArenaLobby
+        connected={connected}
+        arenaCount={arenaCount}
+        inArena={inArena}
+        onJoin={joinArena}
+        onLeave={leaveArena}
+        error={error}
+      />
     );
   }
-
-  // ── Waiting ────────────────────────────────────────────────────────────────
-  if (phase === "waiting" && roomCode) return <WaitingRoom code={roomCode} />;
-  if (phase === "waiting" && !roomCode) return (
-    <div className="min-h-screen bg-[#080808] flex items-center justify-center">
-      <div className="text-zinc-500 text-sm">Joining match…</div>
-    </div>
-  );
 
   // ── Camera check ───────────────────────────────────────────────────────────
   if (phase === "camera-check") return (
@@ -669,68 +585,9 @@ export default function MatchRoom() {
     <ResultsScreen
       result={result}
       role={role}
-      onPlayAgain={() => window.location.reload()}
+      onPlayAgain={() => window.location.href = "/arena"}
     />
   );
 
   return null;
-}
-
-// ── Inline lobby buttons (used in idle state) ─────────────────────────────────
-function LobbyButtons({
-  connected, onCreate, onJoin,
-}: { connected: boolean; onCreate: () => void; onJoin: (code: string) => void }) {
-  const [view, setView]   = useState<"home" | "join">("home");
-  const [code, setCode]   = useState("");
-  const [busy, setBusy]   = useState(false);
-
-  if (view === "home") return (
-    <div className="space-y-3">
-      <button
-        onClick={onCreate}
-        disabled={!connected}
-        className="w-full py-4 bg-[#00ff88] text-black font-black tracking-widest uppercase rounded-lg
-          hover:bg-[#00e87a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors
-          shadow-[0_0_30px_rgba(0,255,136,0.2)]"
-      >
-        Create private match
-      </button>
-      <button
-        onClick={() => setView("join")}
-        disabled={!connected}
-        className="w-full py-4 border border-zinc-700 text-white font-bold tracking-widest uppercase rounded-lg
-          hover:border-zinc-500 hover:bg-zinc-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
-        Join with code
-      </button>
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-      <button onClick={() => { setView("home"); setCode(""); setBusy(false); }} className="text-zinc-500 text-sm hover:text-white transition-colors">
-        ← Back
-      </button>
-      <input
-        autoFocus
-        type="text"
-        value={code}
-        onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-        onKeyDown={(e) => { if (e.key === "Enter" && code.length >= 4) { setBusy(true); onJoin(code); } }}
-        maxLength={6}
-        placeholder="ENTER CODE"
-        className="w-full px-5 py-4 bg-zinc-900 border border-zinc-700 rounded-lg text-white
-          font-black text-2xl tracking-[0.3em] text-center placeholder:text-zinc-700
-          focus:outline-none focus:border-[#00ff88] transition-colors uppercase"
-      />
-      <button
-        onClick={() => { if (code.length >= 4) { setBusy(true); onJoin(code); } }}
-        disabled={code.length < 4 || busy}
-        className="w-full py-4 bg-[#00ff88] text-black font-black tracking-widest uppercase rounded-lg
-          hover:bg-[#00e87a] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-      >
-        {busy ? "Joining…" : "Join match"}
-      </button>
-    </div>
-  );
 }

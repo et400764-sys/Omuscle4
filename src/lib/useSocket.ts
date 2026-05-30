@@ -40,6 +40,8 @@ export function useSocket() {
   const [result,         setResult]         = useState<MatchResult | null>(null);
   const [error,          setError]          = useState<string | null>(null);
   const [connTimeout,    setConnTimeout]    = useState(false);
+  const [arenaCount,     setArenaCount]     = useState(0);
+  const [inArena,        setInArena]        = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -57,11 +59,20 @@ export function useSocket() {
       const SOCKET_URL =
         process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:3003";
 
-      const socket = io(SOCKET_URL, { transports: ["websocket"] });
+      const socket = io(SOCKET_URL, { 
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+      });
       socketRef.current = socket;
 
       socket.on("connect",    () => { setConnected(true); setConnTimeout(false); });
       socket.on("disconnect", () => { setConnected(false); setPhase("error"); setError("Connection lost"); });
+      socket.on("connect_error", (err: any) => {
+        console.error("Socket connection error:", err);
+        setError(`Connection error: ${err.message}`);
+        setConnTimeout(true);
+      });
 
       socket.on("room-created", ({ code }: { code: string }) => {
         setRoomCode(code);
@@ -105,6 +116,16 @@ export function useSocket() {
         setOpponentDom(dominant);
         setOpponentFlaw(flaw);
       });
+
+      socket.on("arena-count", ({ count }: { count: number }) => {
+        setArenaCount(count);
+      });
+
+      socket.on("arena-matched", ({ code, role: matchedRole }: { code: string; role: "host" | "guest" }) => {
+        setRoomCode(code);
+        roleRef.current = matchedRole;
+        setInArena(false);
+      });
     });
 
     return () => {
@@ -136,6 +157,17 @@ export function useSocket() {
     socketRef.current?.emit("score-update", { score, dominant, flaw });
   }, []);
 
+  const joinArena = useCallback(() => {
+    setError(null);
+    setInArena(true);
+    socketRef.current?.emit("join-arena");
+  }, []);
+
+  const leaveArena = useCallback(() => {
+    setInArena(false);
+    socketRef.current?.emit("leave-arena");
+  }, []);
+
   const myReady = readyState[roleRef.current ?? "host"];
   const opponentReady = readyState[roleRef.current === "host" ? "guest" : "host"];
 
@@ -158,5 +190,9 @@ export function useSocket() {
     joinRoom,
     sendReady,
     sendScore,
+    arenaCount,
+    inArena,
+    joinArena,
+    leaveArena,
   };
 }

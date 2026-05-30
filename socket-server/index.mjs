@@ -11,6 +11,9 @@ const io = new Server(httpServer, {
 // roomCode → RoomState
 const rooms = new Map();
 
+// Arena matchmaking queue
+const arenaQueue = []; // Array of socket IDs waiting for arena match
+
 function generateCode() {
   // No confusable chars (0/O, 1/I/L)
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -141,8 +144,81 @@ io.on("connection", (socket) => {
     if (targetId) io.to(targetId).emit("webrtc-signal", { type, payload });
   });
 
-  // ── Disconnect ────────────────────────────────────────────────────────────
+  // ── Join arena (matchmaking) ───────────────────────────────────────────────
+  socket.on("join-arena", () => {
+    // Remove from queue if already there
+    const queueIndex = arenaQueue.indexOf(socket.id);
+    if (queueIndex !== -1) {
+      arenaQueue.splice(queueIndex, 1);
+    }
+
+    // Add to queue
+    arenaQueue.push(socket.id);
+    role = "arena";
+    
+    // Broadcast updated arena count to all clients
+    io.emit("arena-count", { count: arenaQueue.length });
+    console.log(`Arena queue: ${socket.id} joined (total: ${arenaQueue.length})`);
+
+    // Try to match if there are at least 2 players
+    if (arenaQueue.length >= 2) {
+      const player1 = arenaQueue.shift();
+      const player2 = arenaQueue.shift();
+      
+      // Create a room for the matched players
+      let code;
+      do { code = generateCode(); } while (rooms.has(code));
+
+      rooms.set(code, {
+        code,
+        host: player1,
+        guest: player2,
+        status: "camera-check",
+        ready: { host: false, guest: false },
+        scores: { host: null, guest: null },
+      });
+
+      // Join both players to the room
+      const socket1 = io.sockets.sockets.get(player1);
+      const socket2 = io.sockets.sockets.get(player2);
+      
+      if (socket1) {
+        socket1.join(code);
+        socket1.emit("arena-matched", { code, role: "host" });
+      }
+      if (socket2) {
+        socket2.join(code);
+        socket2.emit("arena-matched", { code, role: "guest" });
+      }
+
+      // Update arena count
+      io.emit("arena-count", { count: arenaQueue.length });
+      
+      // Tell both players to move to camera-check phase
+      io.to(code).emit("phase", { phase: "camera-check" });
+      console.log(`Arena match created: ${code} (${player1} vs ${player2})`);
+    }
+  });
+
+// ── Leave arena ────────────────────────────────────────────────────────────
+  socket.on("leave-arena", () => {
+    const queueIndex = arenaQueue.indexOf(socket.id);
+    if (queueIndex !== -1) {
+      arenaQueue.splice(queueIndex, 1);
+      io.emit("arena-count", { count: arenaQueue.length });
+      console.log(`Arena queue: ${socket.id} left (total: ${arenaQueue.length})`);
+    }
+  });
+
+// ── Disconnect ────────────────────────────────────────────────────────────
   socket.on("disconnect", () => {
+    // Remove from arena queue if present
+    const queueIndex = arenaQueue.indexOf(socket.id);
+    if (queueIndex !== -1) {
+      arenaQueue.splice(queueIndex, 1);
+      io.emit("arena-count", { count: arenaQueue.length });
+    }
+
     if (currentRoom) {
       io.to(currentRoom).emit("phase", { phase: "error", reason: "Opponent disconnected" });
       rooms.delete(currentRoom);

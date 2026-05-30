@@ -9,7 +9,7 @@ export default function Home() {
         <div className="flex items-center gap-6 text-sm">
           <Link href="/scan" className="text-zinc-600 hover:text-zinc-400 transition-colors">Solo scan</Link>
           <Link href="/match" className="text-zinc-400 hover:text-white transition-colors font-medium">Private Match</Link>
-          <span className="text-zinc-800 cursor-not-allowed">Enter Arena</span>
+          <Link href="/arena" className="text-zinc-400 hover:text-white transition-colors font-medium">Enter Arena</Link>
           <Link href="/how-it-works" className="text-zinc-600 hover:text-zinc-400 transition-colors">How it works</Link>
         </div>
       </nav>
@@ -56,16 +56,12 @@ export default function Home() {
             Solo scan
           </Link>
           <span className="text-zinc-800 text-xs">·</span>
-          {/* Online match — coming soon */}
-          <span
-            className="text-zinc-800 text-sm cursor-not-allowed tracking-wide flex items-center gap-1.5"
-            title="Online matchmaking — coming soon"
+          <Link
+            href="/arena"
+            className="text-zinc-400 text-sm hover:text-white transition-colors tracking-wide"
           >
             Enter Arena
-            <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-600 px-1.5 py-0.5 rounded font-mono tracking-normal">
-              soon
-            </span>
-          </span>
+          </Link>
         </div>
 
         {/* Stats */}
