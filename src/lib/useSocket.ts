@@ -46,13 +46,6 @@ export function useSocket() {
   useEffect(() => {
     let mounted = true;
 
-    // Show a helpful error if we can't connect within 10 seconds
-    const timeoutId = setTimeout(() => {
-      if (mounted && !socketRef.current?.connected) {
-        setConnTimeout(true);
-      }
-    }, 10000);
-
     import("socket.io-client").then(({ io }) => {
       if (!mounted) return;
 
@@ -63,17 +56,22 @@ export function useSocket() {
         transports: ["websocket", "polling"],
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
+        timeout: 20000,
       });
       socketRef.current = socket;
 
       socket.on("connect",    () => { 
         setConnected(true); 
         setConnTimeout(false); 
-        clearTimeout(timeoutId);
       });
       socket.on("disconnect", () => { setConnected(false); setPhase("error"); setError("Connection lost"); });
       socket.on("connect_error", (err: any) => {
         console.error("Socket connection error:", err);
+        // Don't set error immediately, let socket.io retry
+        if (err.type === 'TransportError') {
+          // Transport errors are normal during reconnection
+          return;
+        }
         setError(`Connection error: ${err.message}`);
         setConnTimeout(true);
       });
@@ -134,7 +132,6 @@ export function useSocket() {
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
       socketRef.current?.disconnect();
     };
   }, []);
