@@ -58,9 +58,9 @@ function startCountdown(roomCode) {
       if (!room) return;
 
       room.status = "scanning";
-      io.to(roomCode).emit("phase", { phase: "scanning", duration: 15 });
+      io.to(roomCode).emit("phase", { phase: "scanning", duration: 90 });
 
-      // Auto-end after 15s
+      // Auto-end after 90s (1:30)
       setTimeout(() => {
         const r = rooms.get(roomCode);
         if (!r || r.status !== "scanning") return;
@@ -104,7 +104,7 @@ function startCountdown(roomCode) {
         // Clean up room after 2 min
         setTimeout(() => rooms.delete(roomCode), 120_000);
         console.log(`Room ${roomCode} finished — host ${hs} vs guest ${gs} (Elo: ${hostElo + hostEloChange} vs ${guestElo + guestEloChange})`);
-      }, 15_000);
+      }, 90_000);
     }
   }, 1000);
 }
@@ -207,6 +207,7 @@ io.on("connection", (socket) => {
     // Send player's current Elo
     const elo = getPlayerElo(socket.id);
     socket.emit("your-elo", { elo });
+    console.log(`Sent Elo to ${socket.id}: ${elo}`);
     
     // Broadcast updated arena count to all clients
     io.emit("arena-count", { count: arenaQueue.length });
@@ -270,6 +271,7 @@ io.on("connection", (socket) => {
       .sort((a, b) => b.elo - a.elo)
       .slice(0, 10); // Top 10 players
     
+    console.log(`Leaderboard requested by ${socket.id}, returning ${leaderboard.length} players`);
     socket.emit("leaderboard", { leaderboard });
   });
 

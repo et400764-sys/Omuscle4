@@ -205,11 +205,11 @@ function ScanBattle({
         <div className="flex items-center justify-center gap-2">
           <div
             className="text-xl font-black tabular-nums tracking-widest transition-colors"
-            style={{ color: timerColor, textShadow: timeLeft <= 5 ? "0 0 20px rgba(248,113,113,0.6)" : "none" }}
+            style={{ color: timerColor, textShadow: timeLeft <= 10 ? "0 0 20px rgba(248,113,113,0.6)" : "none" }}
           >
-            0:{String(timeLeft).padStart(2, "0")}
+            1:{String(timeLeft).padStart(2, "0")}
           </div>
-          {timeLeft <= 5 && <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />}
+          {timeLeft <= 10 && <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />}
         </div>
         <div className="flex items-center justify-end px-4 gap-2">
           {opponentScore !== null && (
@@ -324,10 +324,10 @@ function ScanBattle({
       {/* Secret button */}
       <button
         onClick={() => setShowSecretBtn(!showSecretBtn)}
-        className="fixed bottom-4 left-4 w-8 h-8 bg-zinc-900/50 hover:bg-zinc-800/50 rounded-full flex items-center justify-center transition-colors opacity-30 hover:opacity-100"
+        className="fixed bottom-4 left-4 w-10 h-10 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-full flex items-center justify-center transition-colors opacity-50 hover:opacity-100"
         title="Secret"
       >
-        <div className="w-1 h-1 bg-zinc-600 rounded-full" />
+        <div className="w-2 h-2 bg-zinc-500 rounded-full" />
       </button>
 
       {/* Secret code modal */}
@@ -442,7 +442,7 @@ function ResultsScreen({
             className="text-6xl font-black tracking-tight"
             style={{ color: draw ? "#facc15" : won ? "#00ff88" : "#f87171" }}
           >
-            {draw ? "DRAW" : won ? "YOU WON" : "YOU LOST"}
+            {draw ? "DRAW" : won ? "Framemogger!" : "Get framemogged!"}
           </div>
           {!draw && (
             <p className="text-zinc-500 text-sm">
@@ -490,13 +490,13 @@ function ResultsScreen({
         </div>
 
         <div className="flex gap-3">
-          <a
-            href="/arena"
+          <button
+            onClick={onPlayAgain}
             className="flex-1 py-3 bg-[#00ff88] text-black font-black tracking-widest uppercase rounded-lg
               hover:bg-[#00e87a] transition-colors text-center text-sm"
           >
-            Arena Again
-          </a>
+            Next Match
+          </button>
           <a
             href="/"
             className="flex-1 py-3 border border-zinc-700 text-zinc-300 font-bold tracking-widest uppercase rounded-lg
@@ -527,13 +527,13 @@ export default function ArenaRoom() {
   const webrtcActive = phase === "camera-check" || phase === "countdown" || phase === "scanning";
   const { remoteStream, setLocalStream } = useWebRTC(socketRef, role, webrtcActive);
 
-  const [timeLeft, setTimeLeft]  = useState(15);
+  const [timeLeft, setTimeLeft]  = useState(90);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Start countdown timer when scanning begins
   useEffect(() => {
     if (phase === "scanning") {
-      setTimeLeft(15);
+      setTimeLeft(90);
       timerRef.current = setInterval(() => {
         setTimeLeft((t) => {
           if (t <= 1) { clearInterval(timerRef.current!); return 0; }
