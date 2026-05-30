@@ -46,12 +46,12 @@ export function useSocket() {
   useEffect(() => {
     let mounted = true;
 
-    // Show a helpful error if we can't connect within 6 seconds
+    // Show a helpful error if we can't connect within 10 seconds
     const timeoutId = setTimeout(() => {
       if (mounted && !socketRef.current?.connected) {
         setConnTimeout(true);
       }
-    }, 6000);
+    }, 10000);
 
     import("socket.io-client").then(({ io }) => {
       if (!mounted) return;
@@ -66,7 +66,11 @@ export function useSocket() {
       });
       socketRef.current = socket;
 
-      socket.on("connect",    () => { setConnected(true); setConnTimeout(false); });
+      socket.on("connect",    () => { 
+        setConnected(true); 
+        setConnTimeout(false); 
+        clearTimeout(timeoutId);
+      });
       socket.on("disconnect", () => { setConnected(false); setPhase("error"); setError("Connection lost"); });
       socket.on("connect_error", (err: any) => {
         console.error("Socket connection error:", err);
